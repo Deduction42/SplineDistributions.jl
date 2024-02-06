@@ -1,7 +1,5 @@
 #= to do =====================================================
-use Interpolations.jl to build a spline from points
-differentiate
-integrate
+
 ==============================================================#
 @kwdef struct Spline{N,T}
     vertices :: StepRangeLen{Float64, Float64, Float64, Int64}

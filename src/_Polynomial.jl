@@ -1,9 +1,7 @@
 using StaticArrays
 
 #= To do ==================================================
-differentiate(p::Polynomial)
-integrate(p::Polynomial)
-look into promote rules for adding and subtracting
+
 ==========================================================#
 
 struct Polynomial{N, T}

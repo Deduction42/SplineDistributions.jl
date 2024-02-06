@@ -1,0 +1,4 @@
+(1) Test out incermental wear versus an equivalent single event 
+(2) Test out benchmark normal distribution case
+(3) Build dynamic Bayeisan inference engine
+(4) Build reliability curve generator

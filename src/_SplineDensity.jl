@@ -1,6 +1,7 @@
 #= To Do ===================================================================
-(1) Build transator between SplineSamples and CubicSpline
-(2) Build random_var_subtract(f1::SplineDensity, f2::Gamma)
+(1) Separate out the cdfBasis as a separate input so that it can be reused
+(2) Test against a normal convolution benchmark
+(3) Test incremental convolutions against a single equivalent
 ===========================================================================#
 
 using SpecialFunctions
