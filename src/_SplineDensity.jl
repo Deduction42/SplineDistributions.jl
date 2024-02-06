@@ -8,24 +8,54 @@ using Distributions
 using LinearAlgebra
 
 @kwdef struct SplineDensity{T} <: Distribution{Univariate, Continuous}
-    pdf :: CubicSpline{T}
-    cdf :: Union{CubicSpline{T}, Nothing}
+    pdf :: Spline{4,T}
+    cdf :: Spline{5,T}
 end
 
+function SplineDensity(s::SplineSamples{T}; normalize=true) where T
+    spline  = Spline(s)
+    density = SplineDensity{T}(
+        pdf = spline,
+        cdf = integral(spline)
+    )
+    if normalize
+        return normalize!(density)
+    else
+        return density
+    end
+end
 
+function normalize!(d::SplineDensity)
+    #Scale all polynomials so that the domain integral is 1
+    K = 1/d.cdf(d.cdf.vertices[end]) 
+    d.pdf.segments .= d.pdf.segments .* K
+    d.cdf.segments .= d.cdf.segments .* K
+    return d
+end
 
-pdf(d::SplineDensity, x) = d.pdf(d, x)
-cdf(d::SplineDensity, x) = d.cdf(d, x)
+pdf(d::Spline, x) = d(x)
+
+pdf(d::SplineDensity, x)  = d.pdf(x)
+cdf(d::SplineDensity, x)  = d.cdf(x)
+ccdf(d::SplineDensity, x) = 1-d.cdf(x)
 
 
 """
 subtract gamma distribution from spline density random variable
 """
 function random_var_subtract(fh::SplineDensity{T1}, fw::Gamma{T2}) where {T1, T2}
+    return random_var_subtract(fh.pdf, fw)
+end
+
+function random_var_subtract(fh::CubicSpline{T1}, fw::Gamma{T2}) where {T1, T2}
+    return CubicSpline(random_var_subtract_samples(fh, fw))
+end
+
+function random_var_subtract_samples(fh::CubicSpline{T1}, fw::Gamma{T2}) where {T1, T2}
     T = promote_type(T1, T2)
-    vx = fh.pdf.vertices
-    x0 = fh.pdf.vertices[1]
-    vp = fh.pdf.segments
+    vx = fh.vertices
+    x0 = fh.vertices[1]
+    vp = fh.segments
     PolyType = polytype(CubicSpline) 
     
     #One-time convolution bassis for polynomials and the gamma distribution
