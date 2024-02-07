@@ -1,8 +1,1 @@
-(3) Build out SingleTailBasis object that can allow a single basis to be reused
 
-Build new repo that has wear rate modeling
-(1) See if private repo can be dependency
-(2) Build dynamic Bayeisan inference engine
-(3) Build reliability curve generator
-(4) Build wear rate learning algorithm with arbitrary observations
-(5) Build observation mapping algorithm

@@ -42,11 +42,23 @@ function normalize!(d::SplineDensity)
     return d
 end
 
-pdf(d::Spline, x::Real) = d(x)
+function pdf(d::Spline{N,T0}, x::Real) where {T0, N}
+    T = promote_type(T0, typeof(x))
+    supported = d.vertices[begin] <= x <= d.vertices[end]
+    result = ifelse(supported, d(x), zero(T))
+    
+    return ifelse(isnan(x), T(NaN), result)
+end
 
-pdf(d::SplineDensity, x::Real)  = d.pdf(x)
-cdf(d::SplineDensity, x::Real)  = d.cdf(x)
-ccdf(d::SplineDensity, x::Real) = 1-d.cdf(x)
+function cdf(d::Spline{N,T0}, x::Real) where {T0, N}
+    Δ = (d.vertices[begin], d.vertices[end])
+
+    return d(clamp(x, Δ[1], Δ[2]))
+end
+
+pdf(d::SplineDensity, x::Real)  = pdf(d.pdf, x)
+cdf(d::SplineDensity, x::Real)  = cdf(d.cdf, x)
+
 
 
 """
