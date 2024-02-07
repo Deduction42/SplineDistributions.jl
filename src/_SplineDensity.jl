@@ -26,6 +26,14 @@ function SplineDensity(s::SplineSamples{T}; normalize=true) where T
     return SplineDensity(spline, normalize=normalize)
 end
 
+@kwdef struct SplineConvolutionBasis{D<:Distribution, N, T<:Real}
+    distribution :: D
+    basis :: Vector{SVector{N,T}}
+end
+
+#const CubicConvolutionBasis{D, T} = SplineConvolutionBasis{D, 4, T} where {D,T}
+
+
 function normalize!(d::SplineDensity)
     #Scale all polynomials so that the domain integral is 1
     K = 1/d.cdf(d.cdf.vertices[end]) 
@@ -44,26 +52,38 @@ ccdf(d::SplineDensity, x::Real) = 1-d.cdf(x)
 """
 subtract gamma distribution from spline density random variable
 """
-function random_var_subtract(fh::SplineDensity, fw::Gamma)
+function random_var_subtract(fh::Union{<:SplineDensity,<:CubicSpline}, fw::Gamma)
+    return random_var_subtract(fh, SplineConvolutionBasis(fh, fw))
+end
+function random_var_subtract(fh::SplineDensity, fw::SplineConvolutionBasis)
     return random_var_subtract(fh.pdf, fw)
 end
-
-function random_var_subtract(fh::CubicSpline, fw::Gamma)
+function random_var_subtract(fh::CubicSpline, fw::SplineConvolutionBasis)
     return CubicSpline(random_var_subtract_samples(fh, fw))
 end
 
-function random_var_subtract_samples(fh::CubicSpline{T1}, fw::Gamma{T2}) where {T1, T2}
+function SplineConvolutionBasis(s::SplineDensity, d::Distribution)
+    return SplineConvolutionBasis(s.pdf, d)
+end
+
+function SplineConvolutionBasis(s::Spline{N,T1}, dG::Gamma{T2}) where {N, T1, T2}
+    T = promote_type(T1, T2)
+    PolyType = polytype(CubicSpline)
+    vx = s.vertices
+
+    cdfBasis   = map(x->∫xᵏgammapdf_basis(PolyType, dG, x), vx)
+    convBasis  = @views cdfBasis[(begin+1):end] .- cdfBasis[begin:(end-1)]
+
+    return SplineConvolutionBasis{Gamma, N, T}(dG, convBasis)
+end
+
+function random_var_subtract_samples(fh::CubicSpline{T1}, fw::SplineConvolutionBasis{Gamma, 4, T2}) where {T1, T2}
     T = promote_type(T1, T2)
     vx = fh.vertices
     x0 = fh.vertices[1]
     vp = fh.segments
-    PolyType = polytype(CubicSpline) 
+    basis = fw.basis
     
-    #One-time convolution bassis for polynomials and the gamma distribution
-    #This approach allows for gamma cdf and pdf reuse (cdfs are expensive)
-    cdfBasis   = map(x->∫xᵏgammapdf_basis(PolyType, fw, x), vx)
-    convBasis  = @views cdfBasis[(begin+1):end] .- cdfBasis[begin:(end-1)]
-
     vpdf  = zeros(T, length(vx))
     v∂pdf = zeros(T, length(vx))
     v∂pdf[end] = NaN
@@ -81,8 +101,8 @@ function random_var_subtract_samples(fh::CubicSpline{T1}, fw::Gamma{T2}) where {
         for (ip, ig) in zip(indp, indg)
             p  = substitute(vp[ip], ux)
             ∂p = substitute(differential(vp[ip]), ux) #derivative of ux is 1
-            vpdf[ix]  += dot(p.θ, convBasis[ig])
-            v∂pdf[ix] += dot(∂p.θ, convBasis[ig][SVector{3}(1:3)])
+            vpdf[ix]  += dot(p.θ, basis[ig])
+            v∂pdf[ix] += dot(∂p.θ, basis[ig][SVector{3}(1:3)])
         end
     end
 
@@ -97,6 +117,9 @@ function random_var_subtract_samples(fh::CubicSpline{T1}, fw::Gamma{T2}) where {
         ∂y= v∂pdf
     )
 end
+
+
+
 
 
 

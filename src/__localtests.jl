@@ -20,8 +20,9 @@ plot!(xs, pdf.(dS2,xs))
 
 
 #Repeated shift test, measures loss of information, should be very close
+#dG1 = Gamma(1, 0.05)
 #=
-dG1 = Gamma(1, 0.05)
+dG1 = SplineConvolutionBasis(dS0, Gamma(1, 0.05))
 dGN = Gamma(10, 0.05)
 
 
