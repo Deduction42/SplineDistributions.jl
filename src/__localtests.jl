@@ -22,12 +22,13 @@ plot!(xs, pdf.(dS2,xs))
 #Repeated shift test, measures loss of information, should be very close
 #dG1 = Gamma(1, 0.05)
 #=
-dG1 = SplineConvolutionBasis(dS0, Gamma(1, 0.05))
+N   = 10
+dG1 = SplineConvolutionBasis(dS0, Gamma(10/N, 0.05))
 dGN = Gamma(10, 0.05)
 
 
 rS1 = Ref(random_var_subtract(dS0, dG1))
-for ii in 1:9
+for ii in 1:(N-1)
     rS1[] = random_var_subtract(rS1[], dG1)
 end
 dS1 = rS1[]
