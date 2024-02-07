@@ -18,7 +18,8 @@ getindex(p::Polynomial, ind::Integer) = p.θ[ind+1]
 partype(::Type{Polynomial{N,T}}) where {T,N} = T
 partype(p::Polynomial) = partype(typeof(p))
 
-powers(::Type{Polynomial{N,T}}) where {N,T} = SVector{N}((1:N) .- 1)
+powers(::Type{Polynomial{N}}) where {N} = SVector{N}((1:N) .- 1)
+powers(::Type{Polynomial{N,T}}) where {N,T} = powers(Polynomial{N})
 powers(p::Polynomial) = powers(typeof(p))
 
 Polynomial(x::AbstractVector{T}) where T = Polynomial{length(x),T}(x)

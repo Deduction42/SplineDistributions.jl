@@ -5,6 +5,8 @@
     vertices :: StepRangeLen{Float64, Float64, Float64, Int64}
     segments :: Vector{Polynomial{N,T}}
 end
+Base.length(s::Spline) = 1
+Broadcast.broadcastable(s::Spline) = Ref(s)
 
 """
 Splines are functors and can be evaluated

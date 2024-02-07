@@ -1,5 +1,4 @@
-(1) Test out incermental wear versus an equivalent single event 
-(2) Test out benchmark normal distribution case
+(3) Build out SingleTailBasis object that can allow a single basis to be reused
 
 Build new repo that has wear rate modeling
 (1) See if private repo can be dependency

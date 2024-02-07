@@ -4,17 +4,12 @@
 (3) Test incremental convolutions against a single equivalent
 ===========================================================================#
 
-using SpecialFunctions
-using Distributions
-using LinearAlgebra
-
 @kwdef struct SplineDensity{T} <: Distribution{Univariate, Continuous}
     pdf :: Spline{4,T}
     cdf :: Spline{5,T}
 end
 
-function SplineDensity(s::SplineSamples{T}; normalize=true) where T
-    spline  = Spline(s)
+function SplineDensity(spline::CubicSpline{T}; normalize=true) where T
     density = SplineDensity{T}(
         pdf = spline,
         cdf = integral(spline)
@@ -26,6 +21,11 @@ function SplineDensity(s::SplineSamples{T}; normalize=true) where T
     end
 end
 
+function SplineDensity(s::SplineSamples{T}; normalize=true) where T
+    spline  = CubicSpline(s)
+    return SplineDensity(spline, normalize=normalize)
+end
+
 function normalize!(d::SplineDensity)
     #Scale all polynomials so that the domain integral is 1
     K = 1/d.cdf(d.cdf.vertices[end]) 
@@ -34,21 +34,21 @@ function normalize!(d::SplineDensity)
     return d
 end
 
-pdf(d::Spline, x) = d(x)
+pdf(d::Spline, x::Real) = d(x)
 
-pdf(d::SplineDensity, x)  = d.pdf(x)
-cdf(d::SplineDensity, x)  = d.cdf(x)
-ccdf(d::SplineDensity, x) = 1-d.cdf(x)
+pdf(d::SplineDensity, x::Real)  = d.pdf(x)
+cdf(d::SplineDensity, x::Real)  = d.cdf(x)
+ccdf(d::SplineDensity, x::Real) = 1-d.cdf(x)
 
 
 """
 subtract gamma distribution from spline density random variable
 """
-function random_var_subtract(fh::SplineDensity{T1}, fw::Gamma{T2}) where {T1, T2}
+function random_var_subtract(fh::SplineDensity, fw::Gamma)
     return random_var_subtract(fh.pdf, fw)
 end
 
-function random_var_subtract(fh::CubicSpline{T1}, fw::Gamma{T2}) where {T1, T2}
+function random_var_subtract(fh::CubicSpline, fw::Gamma)
     return CubicSpline(random_var_subtract_samples(fh, fw))
 end
 
@@ -84,6 +84,11 @@ function random_var_subtract_samples(fh::CubicSpline{T1}, fw::Gamma{T2}) where {
             vpdf[ix]  += dot(p.θ, convBasis[ig])
             v∂pdf[ix] += dot(∂p.θ, convBasis[ig][SVector{3}(1:3)])
         end
+    end
+
+    #Set the final derivative to zero which is the limit if NaN appears
+    if isnan(v∂pdf[end])
+        v∂pdf[end] = 0.0
     end
 
     return SplineSamples{T}(
