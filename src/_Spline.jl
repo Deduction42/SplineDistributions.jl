@@ -87,6 +87,32 @@ function integral(s::Spline{N,T}, c=0) where {N,T}
     return ∫s
 end
 
+"""
+Calculate definite integral over entire domain, uses less allocation
+"""
+function integrate(s::Spline{N,T}) where {N,T}
+    C = zero(T)
+    x = s.vertices
+
+    for (k, sk) in enumerate(s.segments)
+        ∫sk = integral(sk)
+        F0 = ∫sk(x[k])
+        F1 = ∫sk(x[k+1])
+        C  = C + (F1-F0)
+    end
+
+    return C
+end
+
+"""
+Normalizes a spline so that its integral is 1 (useful for representing densities)
+"""
+function normalize!(s::Spline)
+    K = 1/integrate(s)
+    s.segments .= s.segments .* K
+    return s
+end
+
 # ===============================================================================
 # Fitting methods (Cubic Splines only)
 # ===============================================================================

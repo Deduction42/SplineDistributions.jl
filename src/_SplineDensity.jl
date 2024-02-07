@@ -31,12 +31,12 @@ end
     basis :: Vector{SVector{N,T}}
 end
 
-#const CubicConvolutionBasis{D, T} = SplineConvolutionBasis{D, 4, T} where {D,T}
+const CubicConvolutionBasis{D, T} = SplineConvolutionBasis{D, 4, T} where {D,T}
 
 
 function normalize!(d::SplineDensity)
     #Scale all polynomials so that the domain integral is 1
-    K = 1/d.cdf(d.cdf.vertices[end]) 
+    K = 1/cdf(d, Inf)
     d.pdf.segments .= d.pdf.segments .* K
     d.cdf.segments .= d.cdf.segments .* K
     return d
