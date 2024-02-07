@@ -150,6 +150,7 @@ plot(vx, [fy.(vx), px.(vx)] )
 
 
 # Testing cubic splines ==========================================================
+#=
 using Plots
 ω = 1.0
 fy(x)  = sin(ω*x)
@@ -167,4 +168,4 @@ x = 0:0.01:10
 scatter(xs, ∫fy.(xs))
 plot!(x, ∫fy.(x))
 plot!(x, ∫s.(x))
-
+=#
