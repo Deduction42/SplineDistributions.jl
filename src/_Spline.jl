@@ -15,11 +15,17 @@ function (s::Spline{N,T})(x::Real) where {N,T}
     if !(s.vertices[begin] <= x <= s.vertices[end])
         return promote_type(T, typeof(x))(NaN)
     end
-
-    i0 = ceil(Int64, (x-s.vertices[begin])/s.vertices.step)
-    ic = clamp(i0, firstindex(s.segments), lastindex(s.segments))
-    return s.segments[ic](x)
+    return s.segments[segment_index(s, x)](x)
 end
+
+"""
+Find the matching spline segment for real input "x"
+"""
+function segment_index(s::Spline, x::Real)
+    i0 = ceil(Int64, (x-s.vertices[begin])/s.vertices.step)
+    return clamp(i0, firstindex(s.segments), lastindex(s.segments)) 
+end
+
 polytype(::Type{Spline{N}}) where N = Polynomial{N}
 polytype(p::Spline{N}) where N = Polynomial{N}
 
@@ -45,6 +51,9 @@ function CubicSpline(x::StepRangeLen, y::AbstractVector{<:Real}, dy::AbstractVec
     return CubicSpline(DualSamples(x, y, dy))
 end
 
+"""
+Updates an existing CubicSpline with a DualSamples object (to avoid allocation)
+"""
 function update!(f::CubicSpline, s::DualSamples)
     if f.vertices != s.x
         error("Cannot update a CubicSpline with DualSamples if their domain bases are different")
@@ -53,6 +62,17 @@ function update!(f::CubicSpline, s::DualSamples)
         f.segments[ii] = fit_cubic_segment(s[ii], s[ii+1])
     end
     return f
+end
+
+"""
+Updates an existing DualSamples object with a CubicSpline (to avoid allocation)
+"""
+function update!(s::DualSamples, f::CubicSpline)
+    for (ii, xi) in enumerate(s.x)
+        s.y[ii]  = f(xi)
+        s.∂y[ii] = derivative(f, xi)
+    end
+    return s
 end
 
 # ===============================================================================
@@ -85,6 +105,16 @@ function integral(s::Spline{N,T}, c=0) where {N,T}
 
     #Return the proper integral
     return ∫s
+end
+
+"""
+Retrieve derivative for a single input value x
+"""
+function derivative(s::Spline, x::Real)
+    if !(s.vertices[begin] <= x <= s.vertices[end]) #Return NaN if out of range
+        return promote_type(T, typeof(x))(NaN)
+    end
+    return differential(s.segments[segment_index(s, x)])(x)
 end
 
 """
