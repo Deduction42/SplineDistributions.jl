@@ -49,7 +49,6 @@ function _random_var_subtract(fh::CubicSpline{T1}, fw::SplineConvolutionBasis{Ga
     
     vpdf  = zeros(T, length(vx))
     v∂pdf = zeros(T, length(vx))
-    v∂pdf[end] = NaN
 
     #ix is the index on the x-axis to calculate the convolution for
     Np = length(vp)

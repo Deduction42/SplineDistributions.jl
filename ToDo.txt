@@ -1,6 +1,11 @@
 Reduce allocations when translating between CubicSpline and SplineSamples
+(0) Rename SplineSamples to DualSamples
 (1) Create a new SplineSample object that contains only one sample (non-vectorized)
     -   Also add a getindex function that retruns a SplineSample from that index
 (2) Extend CubicSpline fitting so that it is doable from two SplineSample objects
 (3) Build non-allocating update methods to update a CubicSpline from SplineSamples and vice-versa
 (4) Build non-allocating random variable subtraction
+(6) Create SampleSplinePair to contain DualSamples and Splines (to reduce allocation)
+(7) Use "diff" for _SplineConvolutionBasis construction
+
+
