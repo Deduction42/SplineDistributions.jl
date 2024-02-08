@@ -7,13 +7,20 @@
 @kwdef struct SplineDensity{T} <: Distribution{Univariate, Continuous}
     pdf :: Spline{4,T}
     cdf :: Spline{5,T}
+    samples :: DualSamples
 end
 
-function SplineDensity(spline::CubicSpline{T}; normalize=true) where T
+function SplineDensity(pdf_spline::CubicSpline{T}; integrate=true, normalize=true) where T
+    ∂pdf_spline(z) = derivative(pdf_spline, z)
+    x  = pdf_spline.vertices
+    cdf_spline = (integrate|normalize) ? integral(pdf_spline) : fillspline(x, Polynomial{5,T}(NaN))
+
     density = SplineDensity{T}(
-        pdf = spline,
-        cdf = integral(spline)
+        pdf = pdf_spline,
+        cdf = cdf_spline,
+        samples = DualSamples(x, pdf_spline.(x), ∂pdf_spline.(x))
     )
+
     if normalize
         return normalize!(density)
     else
@@ -31,6 +38,8 @@ function normalize!(d::SplineDensity)
     K = 1/cdf(d, Inf)
     d.pdf.segments .= d.pdf.segments .* K
     d.cdf.segments .= d.cdf.segments .* K
+    d.samples.y    .= d.samples.y .* K
+    d.samples.∂y   .= d.samples.∂y .* K
     return d
 end
 

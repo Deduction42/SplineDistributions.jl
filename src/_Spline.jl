@@ -4,6 +4,7 @@
 @kwdef struct Spline{N,T}
     vertices :: StepRangeLen{Float64, Float64, Float64, Int64}
     segments :: Vector{Polynomial{N,T}}
+    #Spline{N,T}(x,s) where {N,T} = length(x) == (length(s+1)) ? new{N,T}(x,s) : error("Length of vertices must be the length of segments plus 1")
 end
 Base.length(s::Spline) = 1
 Broadcast.broadcastable(s::Spline) = Ref(s)
@@ -75,6 +76,9 @@ function update!(s::DualSamples, f::CubicSpline)
     return s
 end
 
+function fillspline(x::StepRangeLen, p::Polynomial{N,T}) where {N,T}
+    return Spline{N,T}(x, fill(p, length(x)-1))
+end
 # ===============================================================================
 # Differentiation and integration of splines
 # ===============================================================================

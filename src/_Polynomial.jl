@@ -26,6 +26,9 @@ Polynomial(x::AbstractVector{T}) where T = Polynomial{length(x),T}(x)
 Polynomial{N}(x::AbstractVector{T}) where {N,T} = Polynomial{N,T}(x)
 Polynomial{N}(p::Polynomial{N0,T}) where {N,N0,T} = Polynomial{N,T}(p)
 
+Polynomial{N}(x::T) where {N,T<:Real} = Polynomial{N,T}(@SVector fill(x, N))
+Polynomial{N,T}(x::Real) where {N,T}  = Polynomial{N,T}(@SVector fill(x, N))
+
 function Polynomial{N,T}(p::Polynomial{N0}) where {N, N0, T}
     if N < N0
         error("Cannot convert a polynomial to a lower order")
