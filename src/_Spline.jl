@@ -30,12 +30,12 @@ const CubicSpline{T} = Spline{4,T} where T
 
 CubicSpline(x::StepRangeLen, y::AbstractVector, dy::AbstractVector) = CubicSpline(x, Vector(y), Vector(dy)) 
 
-function CubicSpline(s::SplineSamples{T}) where T
+function CubicSpline(s::DualSamples{T}) where T
     return CubicSpline(s.x, s.y, s.∂y)
 end
 
 function CubicSpline(x::StepRangeLen, y::AbstractVector{T}) where T
-    s = SplineSamples{promote_type(T,Float64)}(x, y)
+    s = DualSamples{promote_type(T,Float64)}(x, y)
     return CubicSpline(s.x, s.y, s.∂y)
 end
 

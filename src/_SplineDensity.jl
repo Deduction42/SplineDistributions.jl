@@ -21,7 +21,7 @@ function SplineDensity(spline::CubicSpline{T}; normalize=true) where T
     end
 end
 
-function SplineDensity(s::SplineSamples{T}; normalize=true) where T
+function SplineDensity(s::DualSamples{T}; normalize=true) where T
     spline  = CubicSpline(s)
     return SplineDensity(spline, normalize=normalize)
 end

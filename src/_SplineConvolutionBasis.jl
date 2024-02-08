@@ -73,7 +73,7 @@ function _random_var_subtract(fh::CubicSpline{T1}, fw::SplineConvolutionBasis{Ga
         v∂pdf[end] = 0.0
     end
 
-    return SplineSamples{T}(
+    return DualSamples{T}(
         x = vx,
         y = vpdf,
         ∂y= v∂pdf

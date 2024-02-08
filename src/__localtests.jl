@@ -4,7 +4,7 @@ include(joinpath(@__DIR__, "__assembly.jl"))
 xs  = 0.0:0.01:1.0
 
 dN0 = Normal(0.9, 0.03)
-dS0 = SplineDensity(SplineSamples(xs, pdf.(dN0, xs)), normalize=false)
+dS0 = SplineDensity(DualSamples(xs, pdf.(dN0, xs)), normalize=false)
 
 #Normal Distribution Shift Test (isn't exact but should be approximate)
 #=
@@ -21,8 +21,8 @@ plot!(xs, pdf.(dS2,xs))
 
 #Repeated shift test, measures loss of information, should be very close
 #dG1 = Gamma(1, 0.05)
-#=
-N   = 10
+
+N   = 100
 dG1 = SplineConvolutionBasis(dS0, Gamma(10/N, 0.05))
 dGN = Gamma(10, 0.05)
 
@@ -36,4 +36,3 @@ dSN = random_var_subtract(dS0, dGN)
 
 plot(xs, pdf.(dSN,xs))
 plot!(xs, pdf.(dS1,xs))
-=#
