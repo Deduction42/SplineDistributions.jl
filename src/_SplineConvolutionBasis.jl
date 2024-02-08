@@ -7,6 +7,66 @@ const CubicConvolutionBasis{D, T} = SplineConvolutionBasis{D, 4, T} where {D,T}
 
 
 
+
+"""
+construct a spline convolution basis
+"""
+function SplineConvolutionBasis(s::SplineDensity, d::Distribution)
+    return SplineConvolutionBasis(s.pdf, d)
+end
+
+function SplineConvolutionBasis(s::Spline{N,T1}, dG::Gamma{T2}) where {N, T1, T2}
+    T = promote_type(T1, T2)
+    PolyType = polytype(CubicSpline)
+    vx = s.vertices
+
+    cdfBasis   = map(x->∫xᵏgammapdf_basis(PolyType, dG, x), vx)
+    convBasis  = diff(cdfBasis)
+
+    return SplineConvolutionBasis{Gamma, N, T}(dG, convBasis)
+end
+
+
+function random_var_subtract!(fh::SplineDensity{T}, fw::SplineConvolutionBasis{Gamma, 4}; update_pdf=true, update_cdf=true) where T
+    vx = fh.pdf.vertices
+    x0 = fh.pdf.vertices[1]
+    vpoly = fh.pdf.segments
+    basis = fw.basis
+    
+    #Extract samples from parent object and set to zero
+    y  = fh.samples.y
+    ∂y = fh.samples.∂y
+    y  .= 0
+    ∂y .= 0
+
+    #ix is the index on the x-axis to calculate the convolution for
+    Np = length(vpoly)
+    for ix in 1:Np
+        ux = Polynomial{2}(SVector{2}(vx[ix]-x0, 1)) #Shift-transformation
+
+        #indg is the gamma lag indices, while indp is the polynomial lag indices
+        indp = ix:Np
+        indg = 1:length(indp)
+
+        #Perform the discreteized convolutions over the lag intervals
+        for (ip, ig) in zip(indp, indg)
+            poly  = substitute(vpoly[ip], ux)
+            ∂poly = substitute(differential(vpoly[ip]), ux) #derivative of ux is 1
+            y[ix]  += dot(poly.θ, basis[ig])
+            ∂y[ix] += dot(∂poly.θ, basis[ig][SVector{3}(1:3)])
+        end
+    end
+    if update_pdf
+        update!(fh.pdf, fh.samples)
+    end
+    if update_cdf
+        integral!(fh.cdf, fh.pdf)
+    end
+    return fh
+end
+
+
+#=
 """
 subtract gamma distribution from spline density random variable
 """
@@ -22,23 +82,6 @@ function random_var_subtract(fh::CubicSpline, fw::SplineConvolutionBasis)
     return CubicSpline(_random_var_subtract(fh, fw))
 end
 
-"""
-construct a spline convolution basis
-"""
-function SplineConvolutionBasis(s::SplineDensity, d::Distribution)
-    return SplineConvolutionBasis(s.pdf, d)
-end
-
-function SplineConvolutionBasis(s::Spline{N,T1}, dG::Gamma{T2}) where {N, T1, T2}
-    T = promote_type(T1, T2)
-    PolyType = polytype(CubicSpline)
-    vx = s.vertices
-
-    cdfBasis   = map(x->∫xᵏgammapdf_basis(PolyType, dG, x), vx)
-    convBasis  = @views cdfBasis[(begin+1):end] .- cdfBasis[begin:(end-1)]
-
-    return SplineConvolutionBasis{Gamma, N, T}(dG, convBasis)
-end
 
 function _random_var_subtract(fh::CubicSpline{T1}, fw::SplineConvolutionBasis{Gamma, 4, T2}) where {T1, T2}
     T = promote_type(T1, T2)
@@ -79,7 +122,7 @@ function _random_var_subtract(fh::CubicSpline{T1}, fw::SplineConvolutionBasis{Ga
         ∂y= v∂pdf
     )
 end
-
+=#
 
 
 

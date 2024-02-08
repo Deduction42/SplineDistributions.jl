@@ -24,15 +24,16 @@ plot!(xs, pdf.(dS2,xs))
 
 N   = 100
 dG1 = SplineConvolutionBasis(dS0, Gamma(10/N, 0.05))
-dGN = Gamma(10, 0.05)
+dGN = SplineConvolutionBasis(dS0, Gamma(10, 0.05))
 
-
-rS1 = Ref(random_var_subtract(dS0, dG1))
-for ii in 1:(N-1)
-    rS1[] = random_var_subtract(rS1[], dG1)
+function subtract_n_times!(dH, dW, N)
+    for ii in 1:(N)
+        random_var_subtract!(dH, dW)
+    end
+    return dH
 end
-dS1 = rS1[]
-dSN = random_var_subtract(dS0, dGN)
+@time dS1 = subtract_n_times!(deepcopy(dS0), dG1, N)
+dSN = random_var_subtract!(deepcopy(dS0), dGN)
 
-plot(xs, pdf.(dSN,xs))
-plot!(xs, pdf.(dS1,xs))
+plot(xs, pdf.(dSN, xs))
+plot!(xs, pdf.(dS1, xs))

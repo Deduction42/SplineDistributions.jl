@@ -79,6 +79,8 @@ end
 function fillspline(x::StepRangeLen, p::Polynomial{N,T}) where {N,T}
     return Spline{N,T}(x, fill(p, length(x)-1))
 end
+
+
 # ===============================================================================
 # Differentiation and integration of splines
 # ===============================================================================
@@ -90,7 +92,28 @@ function differential(s::Spline{N,T}) where {N,T}
 end
 
 """
-Create a new spline that is the integral of the old one, and it set to 0 at the first vertex
+Overwrite an existing spline ∫s that is the integral of spline s (to avoid allocation)
+"""
+function integral!(∫s::Spline{N,T}, s::Spline; c=0) where {N,T}
+    if ∫s.vertices != s.vertices
+        error("Cannnot update integral spline because vertices are different")
+    end
+    C  = T(c)
+    x  = s.vertices
+    for (k, sk) in enumerate(s.segments)
+        ∫sk = integral(sk)
+        
+        (F0, F1) = (∫sk(x[k]), ∫sk(x[k+1]))
+        ∫s.segments[k] = ∫sk + (C-F0)
+
+        C  = C + (F1-F0)
+    end
+    return ∫s
+end
+
+
+"""
+Create a new spline ∫s that is the integral of spline s
 """
 function integral(s::Spline{N,T}, c=0) where {N,T}
     C  = T(c)
@@ -122,7 +145,7 @@ function derivative(s::Spline, x::Real)
 end
 
 """
-Calculate definite integral over entire domain, uses less allocation
+Calculate definite integral over entire domain, avoids some allocation
 """
 function integrate(s::Spline{N,T}) where {N,T}
     C = zero(T)
