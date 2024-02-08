@@ -27,33 +27,33 @@ polytype(p::Spline{N}) where N = Polynomial{N}
 CubicSplines are special cases of Splines
 """
 const CubicSpline{T} = Spline{4,T} where T
+CubicSpline(x::StepRangeLen, segments::AbstractVector{Polynomial{4,T}}) where T = CubicSpline{T}(x, segments)
 
-CubicSpline(x::StepRangeLen, y::AbstractVector, dy::AbstractVector) = CubicSpline(x, Vector(y), Vector(dy)) 
-
+"""
+CubicSpline constructors from a DualSamples object
+"""
 function CubicSpline(s::DualSamples{T}) where T
-    return CubicSpline(s.x, s.y, s.∂y)
+    segments = [fit_cubic_segment(s[ii], s[ii+1]) for ii in firstindex(s):(lastindex(s)-1)]
+    return CubicSpline{T}(s.x, segments)
 end
 
-function CubicSpline(x::StepRangeLen, y::AbstractVector{T}) where T
-    s = DualSamples{promote_type(T,Float64)}(x, y)
-    return CubicSpline(s.x, s.y, s.∂y)
+function CubicSpline(x::StepRangeLen, y::AbstractVector{<:Real})
+    return CubicSpline(DualSamples(x, y))
 end
 
-function CubicSpline(x::StepRangeLen, y::Vector, dy::Vector)
-    if length(x) != length(y) != length(dy)
-        error("Input arguments must all have the same length: x=>$(length(x)), y=>$(length(y)), dy=>$(length(dy))")
+function CubicSpline(x::StepRangeLen, y::AbstractVector{<:Real}, dy::AbstractVector{<:Real})
+    return CubicSpline(DualSamples(x, y, dy))
+end
+
+function update!(f::CubicSpline, s::DualSamples)
+    if f.vertices != s.x
+        error("Cannot update a CubicSpline with DualSamples if their domain bases are different")
     end
-
-    function fit_segment(ii)
-        ind = SVector(ii, ii+1)
-        return fit_cubic_segment(x[ind], y[ind], dy[ind])
+    for ii in firstindex(s):(lastindex(s)-1)
+        f.segments[ii] = fit_cubic_segment(s[ii], s[ii+1])
     end
-    segments = [fit_segment(ii) for ii in 1:(length(x)-1)]
-
-    T = partype(eltype(segments))
-    return CubicSpline{T}(x, segments)
+    return f
 end
-
 
 # ===============================================================================
 # Differentiation and integration of splines
@@ -116,6 +116,16 @@ end
 # ===============================================================================
 # Fitting methods (Cubic Splines only)
 # ===============================================================================
+"""
+Fit a cubic spline with two dual samples, each containing [x, y, ∂y]
+"""
+function fit_cubic_segment(s1::DualSample, s2::DualSample)
+    x  = SVector(s1.x, s2.x)
+    y  = SVector(s1.y, s2.y)
+    ∂y = SVector(s1.∂y, s2.∂y)
+    return fit_cubic_segment(x, y, ∂y)
+end
+
 """
 Fit a cubic spline segment using two points for x, with corresponding values of y and derivatives dy_dx 
 """

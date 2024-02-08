@@ -4,7 +4,7 @@ include(joinpath(@__DIR__, "__assembly.jl"))
 xs  = 0.0:0.01:1.0
 
 dN0 = Normal(0.9, 0.03)
-dS0 = SplineDensity(DualSamples(xs, pdf.(dN0, xs)), normalize=false)
+dS0 = SplineDensity(CubicSpline(xs, pdf.(dN0, xs)), normalize=false)
 
 #Normal Distribution Shift Test (isn't exact but should be approximate)
 #=
