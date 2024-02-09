@@ -36,7 +36,7 @@ function Polynomial{N,T}(p::Polynomial{N0}) where {N, N0, T}
         return p
     else
         Δ = N - N0
-        return Polynomial{N,T}([p.θ; SVector{Δ}(zeros(T, Δ))])
+        return Polynomial{N,T}([p.θ; @SVector zeros(T, Δ)])
     end
 end
 
@@ -91,10 +91,11 @@ end
 -(p1::Real, p2::Polynomial{N}) where N = Polynomial{N}([p1-p2.θ[1]; p2.θ[SVector{N-1}(2:N)]])
 
 
-function substitute(p::Polynomial{N}, u::Polynomial{2}) where N
+function substitute(p::Polynomial{N,T1}, u::Polynomial{2,T2}) where {N,T1,T2}
+    T = promote_type(T1,T2)
     pk  = p.θ[end]*u
     ind = SVector{N-1}(1:(N-1)) 
-    return horner_expansion(pk, u, p.θ[ind])
+    return Polynomial{N,T}(horner_expansion(pk, u, p.θ[ind]))
 end
 
 function horner_expansion(p::Polynomial, u::Polynomial{2}, θ::SVector{N,<:Real}) where N

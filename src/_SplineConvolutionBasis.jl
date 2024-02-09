@@ -33,11 +33,6 @@ function random_var_subtract!(fh::SplineDensity{T}, fw::SplineConvolutionBasis{G
     vpoly = fh.pdf.segments
     basis = fw.basis
     
-    #Extract samples from parent object and set to zero
-    y  = fh.samples.y
-    ∂y = fh.samples.∂y
-    y  .= 0
-    ∂y .= 0
 
     #ix is the index on the x-axis to calculate the convolution for
     Np = length(vpoly)
@@ -47,15 +42,24 @@ function random_var_subtract!(fh::SplineDensity{T}, fw::SplineConvolutionBasis{G
         #indg is the gamma lag indices, while indp is the polynomial lag indices
         indp = ix:Np
         indg = 1:length(indp)
+        iy  = zero(T)
+        i∂y = zero(T)
 
         #Perform the discreteized convolutions over the lag intervals
         for (ip, ig) in zip(indp, indg)
             poly  = substitute(vpoly[ip], ux)
             ∂poly = substitute(differential(vpoly[ip]), ux) #derivative of ux is 1
-            y[ix]  += dot(poly.θ, basis[ig])
-            ∂y[ix] += dot(∂poly.θ, basis[ig][SVector{3}(1:3)])
+            ibasis = basis[ig]
+            iy  +=  dot(poly.θ, ibasis)
+            i∂y +=  dot(∂poly.θ, ibasis[SVector(1,2,3)])
         end
+        fh.samples.y[ix]  = iy
+        fh.samples.∂y[ix] = i∂y 
     end
+    #Set the final samples to zero, as this is the limit
+    fh.samples.y[end]  = zero(T)
+    fh.samples.∂y[end] = zero(T)
+
     if update_pdf
         update!(fh.pdf, fh.samples)
     end
