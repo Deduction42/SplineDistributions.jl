@@ -1,4 +1,5 @@
-Reduce allocations when translating between CubicSpline and DualSamples
-(4) Build non-allocating random variable subtraction
-
+Reduce allocations when expanding polynomials, as this is the main performance bottlenecks
+(*) Work out another solution if needed (consider Horner's method)
+    -  p(u) = ((p[4]*u + p[3])*u + p[2])*u + p[1]
+(1) Complete the SplineDensity update methods (e.g. update_from_samples, update_from_pdf)
 

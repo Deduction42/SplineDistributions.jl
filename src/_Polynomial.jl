@@ -91,6 +91,23 @@ end
 -(p1::Real, p2::Polynomial{N}) where N = Polynomial{N}([p1-p2.θ[1]; p2.θ[SVector{N-1}(2:N)]])
 
 
+function substitute(p::Polynomial{N}, u::Polynomial{2}) where N
+    pk  = p.θ[end]*u
+    ind = SVector{N-1}(1:(N-1)) 
+    return horner_expansion(pk, u, p.θ[ind])
+end
+
+function horner_expansion(p::Polynomial, u::Polynomial{2}, θ::SVector{N,<:Real}) where N
+    pk  = (p + θ[end])*u
+    ind = SVector{N-1}(1:(N-1))
+    return horner_expansion(pk, u, θ[ind])
+end
+
+function horner_expansion(p::Polynomial, u::Polynomial{2}, θ::SVector{1,<:Real})
+    return p + θ[1]
+end
+
+#=
 """
 Substitutes x in a polynomial with u=(mx+k) raised to the appropriate power and collects terms
 p  = ax^2 + bx + c
@@ -127,3 +144,4 @@ end
 function _recursive_expansion(::Type{Polynomial{N,T}}, p::Polynomial{N}, u::Polynomial{2}) where {N,T}
     return SVector{0,Polynomial{N,T}}()
 end
+=#

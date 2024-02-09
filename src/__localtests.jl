@@ -12,7 +12,7 @@ dG1 = Gamma(10, 0.05)
 dN1 = Normal(mean(dG1), std(dG1))
 
 dN2 = Normal(mean(dN0)-mean(dN1), sqrt(var(dN0)+var(dN1)))
-dS2 = SplineDensity(random_var_subtract(dS0, dG1))
+dS2 = random_var_subtract!(deepcopy(dS0), SplineConvolutionBasis(dS0, dG1))
 
 plot(xs, pdf.(dN2,xs))
 plot!(xs, pdf.(dS2,xs))
@@ -32,8 +32,11 @@ function subtract_n_times!(dH, dW, N)
     end
     return dH
 end
+
+dSN = subtract_n_times!(deepcopy(dS0), dGN, 1)
 @time dS1 = subtract_n_times!(deepcopy(dS0), dG1, N)
-dSN = random_var_subtract!(deepcopy(dS0), dGN)
+
+#@profview dS1 = subtract_n_times!(deepcopy(dS0), dG1, N);
 
 plot(xs, pdf.(dSN, xs))
 plot!(xs, pdf.(dS1, xs))
