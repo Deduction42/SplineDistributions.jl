@@ -1,6 +1,8 @@
 using SpecialFunctions
 using Distributions
 using LinearAlgebra
+using Interpolations
+using StaticArrays
 
 import Distributions.pdf
 import Distributions.cdf
@@ -17,7 +19,7 @@ import Distributions.kurtosis
 include(joinpath(@__DIR__,"_SignedGamma.jl"))
 include(joinpath(@__DIR__,"_ShiftedGamma.jl"))
 include(joinpath(@__DIR__,"_Polynomial.jl"))
-include(joinpath(@__DIR__,"_SplineSamples.jl"))
+include(joinpath(@__DIR__,"_DualSamples.jl"))
 include(joinpath(@__DIR__,"_Spline.jl"))
 include(joinpath(@__DIR__,"_SplineDensity.jl"))
 include(joinpath(@__DIR__,"_SplineConvolutionBasis.jl"))

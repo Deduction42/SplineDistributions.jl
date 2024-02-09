@@ -4,54 +4,97 @@
 @kwdef struct Spline{N,T}
     vertices :: StepRangeLen{Float64, Float64, Float64, Int64}
     segments :: Vector{Polynomial{N,T}}
+    #Spline{N,T}(x,s) where {N,T} = length(x) == (length(s+1)) ? new{N,T}(x,s) : error("Length of vertices must be the length of segments plus 1")
 end
 Base.length(s::Spline) = 1
 Broadcast.broadcastable(s::Spline) = Ref(s)
 
 """
-Splines are functors and can be evaluated
+Splines are functors and can be evaluated, if out of range, an extrapolation will be used (robust against roundoff error)
 """
-function (s::Spline{N,T})(x::Real) where {N,T}
-    if !(s.vertices[begin] <= x <= s.vertices[end])
-        return promote_type(T, typeof(x))(NaN)
-    end
-
-    i0 = ceil(Int64, (x-s.vertices[begin])/s.vertices.step)
-    ic = clamp(i0, firstindex(s.segments), lastindex(s.segments))
-    return s.segments[ic](x)
+function (s::Spline{N,T0})(x::Real) where {N,T0}
+    return s.segments[segment_index(s, x)](x)
 end
+
+"""
+Find the matching spline segment for real input "x"
+"""
+function segment_index(s::Spline, x::Real)
+    ind = ceil(Int64, (x-s.vertices[begin])/s.vertices.step)
+    return clamp(ind, firstindex(s.segments), lastindex(s.segments)) 
+end
+
 polytype(::Type{Spline{N}}) where N = Polynomial{N}
 polytype(p::Spline{N}) where N = Polynomial{N}
+getbounds(s::Spline) = extrema((s.vertices[begin], s.vertices[end]))
+
+function inbounds(s::Spline, x::Real)
+    bounds = getbounds(s)
+    return bounds[1] <= x <= bounds[2]
+end
+
 
 """
 CubicSplines are special cases of Splines
 """
 const CubicSpline{T} = Spline{4,T} where T
+CubicSpline(x::StepRangeLen, segments::AbstractVector{Polynomial{4,T}}) where T = CubicSpline{T}(x, segments)
 
-CubicSpline(x::StepRangeLen, y::AbstractVector, dy::AbstractVector) = CubicSpline(x, Vector(y), Vector(dy)) 
-
-function CubicSpline(s::SplineSamples{T}) where T
-    return CubicSpline(s.x, s.y, s.∂y)
+"""
+CubicSpline constructors from a DualSamples object
+"""
+function CubicSpline(s::DualSamples{T}) where T
+    segments = [fit_cubic_segment(s[ii], s[ii+1]) for ii in firstindex(s):(lastindex(s)-1)]
+    return CubicSpline{T}(s.x, segments)
 end
 
-function CubicSpline(x::StepRangeLen, y::AbstractVector{T}) where T
-    s = SplineSamples{promote_type(T,Float64)}(x, y)
-    return CubicSpline(s.x, s.y, s.∂y)
+function CubicSpline(x::StepRangeLen, y::AbstractVector{<:Real})
+    return CubicSpline(DualSamples(x, y))
 end
 
-function CubicSpline(x::StepRangeLen, y::Vector, dy::Vector)
-    if length(x) != length(y) != length(dy)
-        error("Input arguments must all have the same length: x=>$(length(x)), y=>$(length(y)), dy=>$(length(dy))")
-    end
+function CubicSpline(x::StepRangeLen, y::AbstractVector{<:Real}, dy::AbstractVector{<:Real})
+    return CubicSpline(DualSamples(x, y, dy))
+end
 
-    function fit_segment(ii)
-        ind = SVector(ii, ii+1)
-        return fit_cubic_segment(x[ind], y[ind], dy[ind])
+"""
+Updates an existing CubicSpline with a DualSamples object (to avoid allocation)
+"""
+function update!(f::CubicSpline, s::DualSamples)
+    if f.vertices != s.x
+        error("Cannot update a CubicSpline with DualSamples if their domain bases are different")
     end
-    segments = [fit_segment(ii) for ii in 1:(length(x)-1)]
+    for ii in firstindex(s):(lastindex(s)-1)
+        f.segments[ii] = fit_cubic_segment(s[ii], s[ii+1])
+    end
+    return f
+end
 
-    T = partype(eltype(segments))
-    return CubicSpline{T}(x, segments)
+"""
+Updates an existing DualSamples object with a CubicSpline (to avoid allocation)
+"""
+function update!(s::DualSamples, f::CubicSpline)
+    for (ii, xi) in enumerate(s.x)
+        s.y[ii]  = f(xi)
+        s.∂y[ii] = derivative(f, xi)
+    end
+    return s
+end
+
+"""
+Performs a linear substitution of a spline function, returning a spline with a linearly-transformed domain
+"""
+function substitute(s::Spline, u::Polynomial{2,<:Any})
+    vertices = (s.vertices .- u.θ[1])/u.θ[2]
+    segments = map(p->substitute(p,u), s.segments)
+    return Spline(vertices, segments)
+end
+
+
+"""
+Fills a spline with polynomial values
+"""
+function fillspline(x::StepRangeLen, p::Polynomial{N,T}) where {N,T}
+    return Spline{N,T}(x, fill(p, length(x)-1))
 end
 
 
@@ -66,7 +109,28 @@ function differential(s::Spline{N,T}) where {N,T}
 end
 
 """
-Create a new spline that is the integral of the old one, and it set to 0 at the first vertex
+Overwrite an existing spline ∫s that is the integral of spline s (to avoid allocation)
+"""
+function integral!(∫s::Spline{N,T}, s::Spline; c=0) where {N,T}
+    if ∫s.vertices != s.vertices
+        error("Cannnot update integral spline because vertices are different")
+    end
+    C  = T(c)
+    x  = s.vertices
+    for (k, sk) in enumerate(s.segments)
+        ∫sk = integral(sk)
+        
+        (F0, F1) = (∫sk(x[k]), ∫sk(x[k+1]))
+        ∫s.segments[k] = ∫sk + (C-F0)
+
+        C  = C + (F1-F0)
+    end
+    return ∫s
+end
+
+
+"""
+Create a new spline ∫s that is the integral of spline s
 """
 function integral(s::Spline{N,T}, c=0) where {N,T}
     C  = T(c)
@@ -88,7 +152,17 @@ function integral(s::Spline{N,T}, c=0) where {N,T}
 end
 
 """
-Calculate definite integral over entire domain, uses less allocation
+Retrieve derivative for a single input value x
+"""
+function derivative(s::Spline, x::Real)
+    if !(s.vertices[begin] <= x <= s.vertices[end]) #Return NaN if out of range
+        return promote_type(T, typeof(x))(NaN)
+    end
+    return differential(s.segments[segment_index(s, x)])(x)
+end
+
+"""
+Calculate definite integral over entire domain, avoids some allocation
 """
 function integrate(s::Spline{N,T}) where {N,T}
     C = zero(T)
@@ -116,6 +190,16 @@ end
 # ===============================================================================
 # Fitting methods (Cubic Splines only)
 # ===============================================================================
+"""
+Fit a cubic spline with two dual samples, each containing [x, y, ∂y]
+"""
+function fit_cubic_segment(s1::DualSample, s2::DualSample)
+    x  = SVector(s1.x, s2.x)
+    y  = SVector(s1.y, s2.y)
+    ∂y = SVector(s1.∂y, s2.∂y)
+    return fit_cubic_segment(x, y, ∂y)
+end
+
 """
 Fit a cubic spline segment using two points for x, with corresponding values of y and derivatives dy_dx 
 """
