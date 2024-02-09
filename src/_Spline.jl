@@ -10,12 +10,9 @@ Base.length(s::Spline) = 1
 Broadcast.broadcastable(s::Spline) = Ref(s)
 
 """
-Splines are functors and can be evaluated
+Splines are functors and can be evaluated, if out of range, an extrapolation will be used (robust against roundoff error)
 """
-function (s::Spline{N,T})(x::Real) where {N,T}
-    if !(s.vertices[begin] <= x <= s.vertices[end])
-        return promote_type(T, typeof(x))(NaN)
-    end
+function (s::Spline{N,T0})(x::Real) where {N,T0}
     return s.segments[segment_index(s, x)](x)
 end
 
@@ -23,12 +20,19 @@ end
 Find the matching spline segment for real input "x"
 """
 function segment_index(s::Spline, x::Real)
-    i0 = ceil(Int64, (x-s.vertices[begin])/s.vertices.step)
-    return clamp(i0, firstindex(s.segments), lastindex(s.segments)) 
+    ind = ceil(Int64, (x-s.vertices[begin])/s.vertices.step)
+    return clamp(ind, firstindex(s.segments), lastindex(s.segments)) 
 end
 
 polytype(::Type{Spline{N}}) where N = Polynomial{N}
 polytype(p::Spline{N}) where N = Polynomial{N}
+getbounds(s::Spline) = extrema((s.vertices[begin], s.vertices[end]))
+
+function inbounds(s::Spline, x::Real)
+    bounds = getbounds(s)
+    return bounds[1] <= x <= bounds[2]
+end
+
 
 """
 CubicSplines are special cases of Splines
@@ -76,6 +80,19 @@ function update!(s::DualSamples, f::CubicSpline)
     return s
 end
 
+"""
+Performs a linear substitution of a spline function, returning a spline with a linearly-transformed domain
+"""
+function substitute(s::Spline, u::Polynomial{2,<:Any})
+    vertices = (s.vertices .- u.θ[1])/u.θ[2]
+    segments = map(p->substitute(p,u), s.segments)
+    return Spline(vertices, segments)
+end
+
+
+"""
+Fills a spline with polynomial values
+"""
 function fillspline(x::StepRangeLen, p::Polynomial{N,T}) where {N,T}
     return Spline{N,T}(x, fill(p, length(x)-1))
 end

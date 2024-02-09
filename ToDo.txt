@@ -2,4 +2,8 @@ Reduce allocations when expanding polynomials, as this is the main performance b
 (*) Work out another solution if needed (consider Horner's method)
     -  p(u) = ((p[4]*u + p[3])*u + p[2])*u + p[1]
 (1) Complete the SplineDensity update methods (e.g. update_from_samples, update_from_pdf)
-
+(2) Figure out method to substitute (u) for an entire spline (may require axis substitution as well)
+(3) May need an x-asis attatched to SplineConvolutionBasis
+(4) May want to rename SplineConvolutionBasis as SplineIntegralBasis
+(5) Diffs in SplineIntegralBasis should be pulled out
+(6) Correct the pdf and cdf functions to generalize better if "vertices" are reversed

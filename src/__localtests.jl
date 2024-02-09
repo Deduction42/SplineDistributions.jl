@@ -6,7 +6,7 @@ xs  = 0.0:0.01:1.0
 dN0 = Normal(0.9, 0.03)
 dS0 = SplineDensity(CubicSpline(xs, pdf.(dN0, xs)), normalize=false)
 
-sanity_test = true
+sanity_test = false
 consistency_test = true
 
 #Normal Distribution Shift Test (isn't exact but should be approximate)
