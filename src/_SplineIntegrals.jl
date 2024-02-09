@@ -1,41 +1,60 @@
-@kwdef struct SplineConvolutionBasis{D<:Distribution, N, T<:Real}
+@kwdef struct SplineIntegrals{D<:Distribution, N, T<:Real}
     distribution :: D
-    basis :: Vector{SVector{N,T}}
+    vertices :: StepRangeLen{Float64, Float64, Float64, Int64}
+    samples  :: Vector{SVector{N,T}}
 end
 
-const CubicConvolutionBasis{D, T} = SplineConvolutionBasis{D, 4, T} where {D,T}
-
-
+const CubicIntegrals{D, T} = SplineIntegrals{D, 4, T} where {D,T}
 
 
 """
-construct a spline convolution basis
+Construct polynomial integrals with pdf functions of d (∫ p*fd dx) 
+Polynomial terms are based off the spline-based pdf of s
+Integral samples are obtained at the vertices of s
 """
-function SplineConvolutionBasis(s::SplineDensity, d::Distribution)
-    return SplineConvolutionBasis(s.pdf, d)
+function SplineIntegrals(s::SplineDensity, d::Distribution)
+    return SplineIntegrals(s.pdf, d)
 end
 
-function SplineConvolutionBasis(s::Spline{N,T1}, dG::Gamma{T2}) where {N, T1, T2}
+"""
+Construct polynomial integrals with pdf functions of d (∫ p*fd dx) 
+Polynomial terms are based off the spline s
+Integral samples are obtained at the vertices of s
+"""
+function SplineIntegrals(s::Spline{N,T1}, dG::Gamma{T2}) where {N, T1, T2}
     T = promote_type(T1, T2)
     PolyType = polytype(CubicSpline)
-    vx = s.vertices
+    samples  = map(x->∫xᵏgammapdf_basis(PolyType, dG, x), s.vertices)
 
-    cdfBasis   = map(x->∫xᵏgammapdf_basis(PolyType, dG, x), vx)
-    convBasis  = diff(cdfBasis)
-
-    return SplineConvolutionBasis{Gamma, N, T}(dG, convBasis)
+    return SplineIntegrals{Gamma, N, T}(dG, s.vertices, samples)
 end
 
+"""
+Subtract a gamma random variable (fw) from a spline density function (fh) and overwrite the samples of fh
+By default it also updates the pdf and the cdf. It does not normalize so the integral might be slightly less than 1.
+"""
+function random_var_subtract!(fh::SplineDensity, fw::Gamma, update_pdf=true, update_cdf=true)
+    ∫fw = SplineIntegrals(fh, fw)
+    return random_var_subtract!(fh, ∫fw, update_pdf=update_pdf, update_cdf=update_cdf)
+end
 
-function random_var_subtract!(fh::SplineDensity{T}, fw::SplineConvolutionBasis{Gamma, 4}; update_pdf=true, update_cdf=true) where T
+"""
+Subtract the SplineIntegrals of a gamma random variable (fw) from a spline density function (fh) and overwrite the samples of fh
+SplineIntegrals are used as a standin for the original distribution allowing for reuse, avoiding repeaded cdf calcualtions
+By default it also updates the pdf and the cdf. It does not normalize so the integral might be slightly less than 1.
+"""
+function random_var_subtract!(fh::SplineDensity{T}, fw::CubicIntegrals{Gamma}; update_pdf=true, update_cdf=true) where T
+    if fh.pdf.vertices != fw.vertices
+        error("SplineDensity and SplineIntegral must be evaluated at the same vertices")
+    end
+
     vx = fh.pdf.vertices
     x0 = fh.pdf.vertices[1]
-    vpoly = fh.pdf.segments
-    basis = fw.basis
-    
+    polys = fh.pdf.segments
+    intervalpolyterms = diff(fw.samples) #Polynomial integral terms over the intervals (set at SplineIntegrals)
 
     #ix is the index on the x-axis to calculate the convolution for
-    Np = length(vpoly)
+    Np = length(polys)
     for ix in 1:Np
         ux = Polynomial{2}(SVector{2}(vx[ix]-x0, 1)) #Shift-transformation
 
@@ -47,11 +66,11 @@ function random_var_subtract!(fh::SplineDensity{T}, fw::SplineConvolutionBasis{G
 
         #Perform the discreteized convolutions over the lag intervals
         for (ip, ig) in zip(indp, indg)
-            poly  = substitute(vpoly[ip], ux)
-            ∂poly = substitute(differential(vpoly[ip]), ux) #derivative of ux is 1
-            ibasis = basis[ig]
-            iy  +=  dot(poly.θ, ibasis)
-            i∂y +=  dot(∂poly.θ, ibasis[SVector(1,2,3)])
+            poly  = substitute(polys[ip], ux)
+            ∂poly = substitute(differential(polys[ip]), ux) #derivative of ux is 1
+            polyterms = intervalpolyterms[ig]
+            iy  +=  dot(poly.θ, polyterms)
+            i∂y +=  dot(∂poly.θ, polyterms[SVector(1,2,3)])
         end
         fh.samples.y[ix]  = iy
         fh.samples.∂y[ix] = i∂y 
@@ -66,6 +85,7 @@ function random_var_subtract!(fh::SplineDensity{T}, fw::SplineConvolutionBasis{G
     if update_cdf
         integral!(fh.cdf, fh.pdf)
     end
+
     return fh
 end
 
