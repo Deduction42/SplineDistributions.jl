@@ -1,1 +1,1 @@
-include("_SplineIntegrals.jl")
+include("_SplineConvolutions.jl")

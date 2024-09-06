@@ -9,10 +9,10 @@ module SplineDistributions
         DualSample,
         Spline,
         CubicSpline,
-        SplineIntegrals, 
-        CubicIntegrals, 
+        SplineConvolutions, 
+        CubicConvolutions, 
         pdf,
         cdf,
         normalize!,
-        random_var_subtract!
+        convolution_minus!
 end
