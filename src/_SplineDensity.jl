@@ -80,6 +80,6 @@ function normalize!(d::SplineDensity)
     d.pdf.segments .= d.pdf.segments .* K
     d.cdf.segments .= d.cdf.segments .* K
     d.samples.y    .= d.samples.y .* K
-    d.samples.∂y   .= d.samples.∂y .* K
+    d.samples.dy   .= d.samples.dy .* K
     return d
 end

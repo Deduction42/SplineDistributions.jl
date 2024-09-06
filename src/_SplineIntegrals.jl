@@ -64,7 +64,7 @@ function random_var_subtract!(fh::SplineDensity{T}, fw::CubicIntegrals{Gamma}; u
         indp = ix:Np
         indg = 1:length(indp)
         iy  = zero(T)
-        i∂y = zero(T)
+        idy = zero(T)
 
         #Perform the discreteized convolutions over the lag intervals
         for (ip, ig) in zip(indp, indg)
@@ -72,14 +72,14 @@ function random_var_subtract!(fh::SplineDensity{T}, fw::CubicIntegrals{Gamma}; u
             ∂poly = substitute(differential(polys[ip]), ux) #derivative of ux is 1
             polyterms = intervalpolyterms[ig]
             iy  +=  dot(poly.θ, polyterms)
-            i∂y +=  dot(∂poly.θ, polyterms[SVector(1,2,3)])
+            idy +=  dot(∂poly.θ, polyterms[SVector(1,2,3)])
         end
         fh.samples.y[ix]  = iy
-        fh.samples.∂y[ix] = i∂y 
+        fh.samples.dy[ix] = idy 
     end
     #Set the final samples to zero, as this is the limit
     fh.samples.y[end]  = zero(T)
-    fh.samples.∂y[end] = zero(T)
+    fh.samples.dy[end] = zero(T)
 
     if update_pdf
         update!(fh.pdf, fh.samples)
