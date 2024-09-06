@@ -1,5 +1,7 @@
+using Revise
+using SplineDistributions
+using Distributions
 using Plots
-include(joinpath(@__DIR__, "__assembly.jl"))
 
 xs  = 0.0:0.01:1.0
 
@@ -15,7 +17,7 @@ if sanity_test
     dN1 = Normal(mean(dG1), std(dG1))
 
     @time dN2 = Normal(mean(dN0)-mean(dN1), sqrt(var(dN0)+var(dN1)))
-    @time dS2 = random_var_subtract!(deepcopy(dS0), SplineIntegrals(dS0, dG1))
+    @time dS2 = convolution_minus!(deepcopy(dS0), SplineConvolutions(dS0, dG1))
 
     plot(xs, pdf.(dN2,xs))
     plot!(xs, pdf.(dS2,xs))
@@ -27,12 +29,12 @@ end
 
 if consistency_test
     N   = 1000
-    dG1 = SplineIntegrals(dS0, Gamma(10/N, 0.05))
-    dGN = SplineIntegrals(dS0, Gamma(10, 0.05))
+    dG1 = SplineConvolutions(dS0, Gamma(10/N, 0.05))
+    dGN = SplineConvolutions(dS0, Gamma(10, 0.05))
 
     function subtract_n_times!(dH, dW, N)
         for ii in 1:(N)
-            random_var_subtract!(dH, dW)
+            convolution_minus!(dH, dW)
         end
         return dH
     end

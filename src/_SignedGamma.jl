@@ -1,4 +1,4 @@
-using Distributions
+include("__imports.jl")
 
 #Signed Gamma distribution that allows for θ values to be negative
 struct SignedGamma{T} <: Distribution{Univariate, Continuous}

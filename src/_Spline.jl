@@ -1,6 +1,8 @@
 #= to do =====================================================
 
 ==============================================================#
+include("_DualSamples.jl")
+
 @kwdef struct Spline{N,T}
     vertices :: StepRangeLen{Float64, Float64, Float64, Int64}
     segments :: Vector{Polynomial{N,T}}
@@ -75,7 +77,7 @@ Updates an existing DualSamples object with a CubicSpline (to avoid allocation)
 function update!(s::DualSamples, f::CubicSpline)
     for (ii, xi) in enumerate(s.x)
         s.y[ii]  = f(xi)
-        s.∂y[ii] = derivative(f, xi)
+        s.dy[ii] = derivative(f, xi)
     end
     return s
 end
@@ -191,13 +193,13 @@ end
 # Fitting methods (Cubic Splines only)
 # ===============================================================================
 """
-Fit a cubic spline with two dual samples, each containing [x, y, ∂y]
+Fit a cubic spline with two dual samples, each containing [x, y, dy]
 """
 function fit_cubic_segment(s1::DualSample, s2::DualSample)
     x  = SVector(s1.x, s2.x)
     y  = SVector(s1.y, s2.y)
-    ∂y = SVector(s1.∂y, s2.∂y)
-    return fit_cubic_segment(x, y, ∂y)
+    dy = SVector(s1.dy, s2.dy)
+    return fit_cubic_segment(x, y, dy)
 end
 
 """

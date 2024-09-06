@@ -1,6 +1,7 @@
 #= To Do ===================================================================
 
 ===========================================================================#
+include("_Spline.jl")
 
 @kwdef struct SplineDensity{T} <: Distribution{Univariate, Continuous}
     pdf :: Spline{4,T}
@@ -79,6 +80,6 @@ function normalize!(d::SplineDensity)
     d.pdf.segments .= d.pdf.segments .* K
     d.cdf.segments .= d.cdf.segments .* K
     d.samples.y    .= d.samples.y .* K
-    d.samples.∂y   .= d.samples.∂y .* K
+    d.samples.dy   .= d.samples.dy .* K
     return d
 end
