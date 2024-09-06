@@ -1,4 +1,4 @@
-using StaticArrays
+include("_ShiftedGamma.jl")
 
 #= To do ==================================================
 

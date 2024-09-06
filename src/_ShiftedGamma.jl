@@ -1,3 +1,5 @@
+include("_SignedGamma.jl")
+
 # ===============================================================================
 # Gamma distribution that is simply shifted/rotated 
 # (special case where NormalGamma has a normal variance of 0)

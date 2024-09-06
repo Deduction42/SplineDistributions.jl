@@ -1,3 +1,4 @@
+include("_Polynomial.jl")
 import Interpolations as Itp
 
 """

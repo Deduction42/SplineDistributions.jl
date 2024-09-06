@@ -1,4 +1,4 @@
-name = "WearRateDistributions"
+name = "SplineDistributions"
 uuid = "3a55a41c-b17d-44d7-981a-fbe088e2d8c8"
 authors = ["Ruben Gonzalez <ruben.carbonbased@gmail.com> and contributors"]
 version = "1.0.0-DEV"

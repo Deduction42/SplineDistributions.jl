@@ -1,6 +1,7 @@
 #= To Do ===================================================================
 
 ===========================================================================#
+include("_Spline.jl")
 
 @kwdef struct SplineDensity{T} <: Distribution{Univariate, Continuous}
     pdf :: Spline{4,T}

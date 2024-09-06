@@ -1,6 +1,8 @@
 #= to do =====================================================
 
 ==============================================================#
+include("_DualSamples.jl")
+
 @kwdef struct Spline{N,T}
     vertices :: StepRangeLen{Float64, Float64, Float64, Int64}
     segments :: Vector{Polynomial{N,T}}

@@ -1,5 +1,7 @@
+using Revise
+using SplineDistributions
+using Distributions
 using Plots
-include(joinpath(@__DIR__, "__assembly.jl"))
 
 xs  = 0.0:0.01:1.0
 

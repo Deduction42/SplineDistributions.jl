@@ -1,3 +1,5 @@
+include("_SplineDensity.jl")
+
 @kwdef struct SplineIntegrals{D<:Distribution, N, T<:Real}
     distribution :: D
     vertices :: StepRangeLen{Float64, Float64, Float64, Int64}
@@ -88,68 +90,6 @@ function random_var_subtract!(fh::SplineDensity{T}, fw::CubicIntegrals{Gamma}; u
 
     return fh
 end
-
-
-#=
-"""
-subtract gamma distribution from spline density random variable
-"""
-function random_var_subtract(fh::Union{<:SplineDensity,<:CubicSpline}, fw::Gamma)
-    return random_var_subtract(fh, SplineConvolutionBasis(fh, fw))
-end
-
-function random_var_subtract(fh::SplineDensity, fw::SplineConvolutionBasis)
-    return random_var_subtract(fh.pdf, fw)
-end
-
-function random_var_subtract(fh::CubicSpline, fw::SplineConvolutionBasis)
-    return CubicSpline(_random_var_subtract(fh, fw))
-end
-
-
-function _random_var_subtract(fh::CubicSpline{T1}, fw::SplineConvolutionBasis{Gamma, 4, T2}) where {T1, T2}
-    T = promote_type(T1, T2)
-    vx = fh.vertices
-    x0 = fh.vertices[1]
-    vp = fh.segments
-    basis = fw.basis
-    
-    vpdf  = zeros(T, length(vx))
-    v∂pdf = zeros(T, length(vx))
-
-    #ix is the index on the x-axis to calculate the convolution for
-    Np = length(vp)
-    for ix in 1:Np
-        ux = Polynomial{2}(SVector{2}(vx[ix]-x0, 1)) #Shift-transformation
-
-        #indg is the gamma lag indices, while indp is the polynomial lag indices
-        indp = ix:Np
-        indg = 1:length(indp)
-
-        #Perform the discreteized convolutions over the lag intervals
-        for (ip, ig) in zip(indp, indg)
-            p  = substitute(vp[ip], ux)
-            ∂p = substitute(differential(vp[ip]), ux) #derivative of ux is 1
-            vpdf[ix]  += dot(p.θ, basis[ig])
-            v∂pdf[ix] += dot(∂p.θ, basis[ig][SVector{3}(1:3)])
-        end
-    end
-
-    #Set the final derivative to zero which is the limit if NaN appears
-    if isnan(v∂pdf[end])
-        v∂pdf[end] = 0.0
-    end
-
-    return DualSamples{T}(
-        x = vx,
-        y = vpdf,
-        ∂y= v∂pdf
-    )
-end
-=#
-
-
-
 
 
 """
