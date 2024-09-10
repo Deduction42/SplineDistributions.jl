@@ -1,2 +1,9 @@
-
-
+(1) Merge Wear Rate Model code into this repo
+     -  Important feature is that substitutions are tested and convolutions have "add" capabilities
+(2) Use sequential loading pattern 
+     -  Used to allow for better linting
+(3) Change convolution naming conventions
+     -  SplineIntegrals should be SplineConvolutions
+     -  The distribution shouldn't have to be a parameter
+     -  use "convolution!" and "convolution_minus!" for convolutions
+(4) Remove "partial" symbols from API (use dy, and dpdf)
