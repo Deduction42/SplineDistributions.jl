@@ -1,1 +1,1 @@
-include("_SplineConvolutions.jl")
+include(joinpath(@__DIR__,"density_differentials.jl"))

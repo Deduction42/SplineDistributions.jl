@@ -1,20 +1,23 @@
-include("__imports.jl")
+include("_Polynomial.jl")
 
 #Signed Gamma distribution that allows for θ values to be negative
 struct SignedGamma{T} <: Distribution{Univariate, Continuous}
     α :: T
     θ :: T
-    SignedGamma{T}(α, θ) where T = if (α <= 0)
-        error("α must be greater than 0")
-    elseif iszero(θ)
-        error("θ must not be zero")
-    else
-        new()
+    function SignedGamma{T}(α, θ) where T
+        if (α <= 0)
+            return error("α must be greater than 0")
+        elseif iszero(θ)
+            return error("θ must not be zero")
+        else
+            return new{T}(α, θ)
+        end
     end
 end
 
 import Distributions.Gamma
-SignedGamma(d::Gamma) = SignedGamma(d.α, d.θ)
+SignedGamma(α::T1, θ::T2) where {T1,T2} = SignedGamma{promote_type(T1,T2)}(α, θ)
+SignedGamma(d::Gamma{T}) where T = SignedGamma{T}(d.α, d.θ)
 Gamma(d::SignedGamma) = Gamma(d.α, abs(d.θ))
 
 # ============================================================================================

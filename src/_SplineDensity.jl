@@ -27,9 +27,9 @@ function SplineDensity(pdf_spline::CubicSpline{T}; integrate=true, normalize=tru
     end
 end
 
-function SplineDensity(s::DualSamples{T}; normalize=true) where T
-    spline  = CubicSpline(s)
-    return SplineDensity(spline, normalize=normalize)
+function SplineDensity(samples::DualSamples{T}; integrate=true, normalize=true) where T
+    spline  = CubicSpline(samples)
+    return SplineDensity(spline, integrate=integrate, normalize=normalize)
 end
 
 
@@ -46,6 +46,12 @@ end
 pdf(d::SplineDensity, x::Real)  = pdf(d.pdf, x)
 cdf(d::SplineDensity, x::Real)  = cdf(d.cdf, x)
 
+"""
+Shortcut method for obtaining DualSamples from a CubicSpline using the f and ∂f method
+"""
+function DualSamples(d::SplineDensity)
+    return DualSamples(d.pdf)
+end
 
 """
 Sychronize a SplineDensity object from its samples
@@ -83,3 +89,50 @@ function normalize!(d::SplineDensity)
     d.samples.dy   .= d.samples.dy .* K
     return d
 end
+
+"""
+Substitute a linear polynomial in the pdf
+"""
+function substitute(d::SplineDensity, u::Polynomial{2})
+    pdfsub = substitute(d.pdf, u)
+    
+    if pdfsub.vertices.step < 0 #If vertices are negative steps, rearrange
+        xs = reverse(pdfsub.vertices)
+        ps = reverse!(pdfsub.segments)
+        return SplineDensity(CubicSpline(xs, ps))
+
+    else #Keep things as-is (elements are in order)
+        return SplineDensity(pdfsub)
+    end
+end
+
+
+function mean(d::SplineDensity{T}) where T
+    μ = zero(promote_type(T,Float64))
+
+    for (ii, ply) in enumerate(d.pdf.segments)
+        ∫xply = integral(times_x(ply))
+        x = d.pdf.vertices[SVector(ii, ii+1)]
+        μ  += (∫xply(x[2]) - ∫xply(x[1]))
+    end
+
+    return μ
+end
+
+function var(d::SplineDensity{T}) where T
+    μ  = mean(d)
+    σ² = zero(promote_type(T,Float64))
+    ε  = Polynomial{2}(SVector(-μ, 1.0))
+
+    for (ii, ply) in enumerate(d.pdf.segments)
+        ∫ε²ply = integral(ply*ε*ε)
+        x   = d.pdf.vertices[SVector(ii, ii+1)]
+        σ² += (∫ε²ply(x[2]) - ∫ε²ply(x[1]))
+    end
+
+    return σ²
+end
+
+
+
+

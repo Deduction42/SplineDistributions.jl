@@ -1,8 +1,7 @@
-include("_ShiftedGamma.jl")
-
 #= To do ==================================================
 
 ==========================================================#
+include("__imports.jl")
 
 struct Polynomial{N, T}
     θ :: SVector{N, T}
@@ -68,6 +67,7 @@ end
 # ==================================================================================
 # Operators for polynomials
 # ==================================================================================
+-(p::Polynomial{N}) where N = Polynomial{N}(-p.θ)
 *(p::Polynomial{N}, x::Real) where N = Polynomial{N}(x*p.θ)
 *(x::Real, p::Polynomial{N}) where N = Polynomial{N}(x*p.θ)
 *(p::Polynomial{N}, u::Polynomial{2}) where N = u[0]*p + u[1]*times_x(p)
@@ -90,7 +90,9 @@ end
 -(p1::Polynomial{N}, p2::Real) where N = Polynomial{N}([p1.θ[1]-p2; p1.θ[SVector{N-1}(2:N)]])
 -(p1::Real, p2::Polynomial{N}) where N = Polynomial{N}([p1-p2.θ[1]; p2.θ[SVector{N-1}(2:N)]])
 
-
+"""
+Substitutes a linear function u(x) = b + ax inside a polynomial p(x) and collects the terms
+"""
 function substitute(p::Polynomial{N,T1}, u::Polynomial{2,T2}) where {N,T1,T2}
     T = promote_type(T1,T2)
     pk  = p.θ[end]*u
@@ -98,6 +100,9 @@ function substitute(p::Polynomial{N,T1}, u::Polynomial{2,T2}) where {N,T1,T2}
     return Polynomial{N,T}(horner_expansion(pk, u, p.θ[ind]))
 end
 
+"""
+Recursively applies Hornner's method to expand polynomial terms of p(x) given a linear substitution u(x) = b + ax
+"""
 function horner_expansion(p::Polynomial, u::Polynomial{2}, θ::SVector{N,<:Real}) where N
     pk  = (p + θ[end])*u
     ind = SVector{N-1}(1:(N-1))
@@ -107,42 +112,3 @@ end
 function horner_expansion(p::Polynomial, u::Polynomial{2}, θ::SVector{1,<:Real})
     return p + θ[1]
 end
-
-#=
-"""
-Substitutes x in a polynomial with u=(mx+k) raised to the appropriate power and collects terms
-p  = ax^2 + bx + c
-pt = a(mx+k)^2 + b(mx+k) + c(mx+k)^0 -> (collect x terms)
-"""
-function substitute(p::Polynomial{N}, u::Polynomial{2}) where N
-    u_expanded = expansions(Polynomial{N}, u)
-    return substitute_expansions(p, u_expanded)
-end
-
-"""
-Substitutes polynomial terms with expansions obtained by the expansions function;
-every polynomial parameter will be multiplied by a substitution u=(mx+k) raised to the appropriate power
-p  = ax^2 + bx + c
-pt = a(mx+k)^2 + b(mx+k) + c(mx+k)^0 
-if intermediate results do not need to be reused, use substitute(p::Polynomial, u::Polynomial{2}) instead
-"""
-function substitute_expansions(p::Polynomial{N}, u_expanded::SVector{N, <:Polynomial{N}}) where N
-    return mapreduce((pθ, ue)-> pθ*ue, +, p.θ, u_expanded)
-end
-
-"Expands u=(mx+k) to a power to produce a Polynomial{N}, returning all intermediate expansions"
-function expansions(::Type{Polynomial{N}}, u::Polynomial{2,T}) where {N,T}
-    p = Polynomial{1,T}(SVector(1))
-    return SVector{N}([Polynomial{N}(p); _recursive_expansion(Polynomial{N,T}, p, u)])
-end
-
-function _recursive_expansion(::Type{Polynomial{N,T}}, p::Polynomial{K}, u::Polynomial{2}) where {N, K, T}
-    PT  = Polynomial{N,T}
-    p⁺  = p*u
-    return SVector{N-K, PT}([PT(p⁺); _recursive_expansion(PT, p⁺, u)])
-end
-
-function _recursive_expansion(::Type{Polynomial{N,T}}, p::Polynomial{N}, u::Polynomial{2}) where {N,T}
-    return SVector{0,Polynomial{N,T}}()
-end
-=#

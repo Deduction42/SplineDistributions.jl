@@ -3,7 +3,6 @@
 (2) Use sequential loading pattern 
      -  Used to allow for better linting
 (3) Change convolution naming conventions
-     -  SplineIntegrals should be SplineConvolutions
-     -  The distribution shouldn't have to be a parameter
-     -  use "convolution!" and "convolution_minus!" for convolutions
+     -  SplineConvolution should be SplineConvolutions
+     -  use "convolve!" and "convolve_minus!" for convolutions
 (4) Remove "partial" symbols from API (use dy, and dpdf)

@@ -6,10 +6,17 @@ include("_DualSamples.jl")
 @kwdef struct Spline{N,T}
     vertices :: StepRangeLen{Float64, Float64, Float64, Int64}
     segments :: Vector{Polynomial{N,T}}
-    #Spline{N,T}(x,s) where {N,T} = length(x) == (length(s+1)) ? new{N,T}(x,s) : error("Length of vertices must be the length of segments plus 1")
+    function Spline{N,T}(x,s) where {N,T} 
+        if length(x) == (length(s)+1) 
+            return new{N,T}(x,s)
+        else 
+            error("Length of vertices must be the length of segments plus 1")
+        end
+    end
 end
 Base.length(s::Spline) = 1
 Broadcast.broadcastable(s::Spline) = Ref(s)
+-(s::Spline{N,T}) where {N,T} = Spline{N,T}(s.vertices, -s.segments)
 
 """
 Splines are functors and can be evaluated, if out of range, an extrapolation will be used (robust against roundoff error)
@@ -33,6 +40,16 @@ getbounds(s::Spline) = extrema((s.vertices[begin], s.vertices[end]))
 function inbounds(s::Spline, x::Real)
     bounds = getbounds(s)
     return bounds[1] <= x <= bounds[2]
+end
+
+"""
+Shortcut method for obtaining DualSamples from a CubicSpline using the (f, ∂f) method
+"""
+function DualSamples(s::Spline)
+    ∂s    = differential(s)
+    f(x)  = s(x)
+    ∂f(x) = ∂s(x)
+    return DualSamples(s.vertices, (f, ∂f))
 end
 
 
@@ -85,10 +102,10 @@ end
 """
 Performs a linear substitution of a spline function, returning a spline with a linearly-transformed domain
 """
-function substitute(s::Spline, u::Polynomial{2,<:Any})
-    vertices = (s.vertices .- u.θ[1])/u.θ[2]
+function substitute(s::Spline{N,T}, u::Polynomial{2,<:Any}) where {N,T}
+    vertices = (s.vertices .- u.θ[1])./u.θ[2]
     segments = map(p->substitute(p,u), s.segments)
-    return Spline(vertices, segments)
+    return Spline{N,T}(vertices, segments)
 end
 
 
